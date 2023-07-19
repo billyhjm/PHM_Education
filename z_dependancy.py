@@ -29,21 +29,21 @@ def z_fft_simple(xn,fs):
 
   return f, A
   
-def  z_feature_simple(v, fs, band=[]):
-  f1 = np.mean(v)+0.1;
-  f2 = np.var(v);
-  f3 = stats.skew(v)+0.1;
-  f4 = stats.kurtosis(v, axis=0, fisher=False);
-  f5 = max(v)/np.sqrt(np.mean(v**2));
-  f6 = max(v)/(np.mean(v)+0.1);
-  f7 = np.sqrt(np.mean(v**2))/(np.mean(v)+0.1);
+def  z_feature_time(v):
+  RMS = np.sqrt(np.mean(v**2))
+  SKEW = stats.skew(v)
+  KURT = stats.kurtosis(v, axis=0, fisher=False)
+  CF = max(v)/np.sqrt(np.mean(v**2))
 
-  feature = [f1, f2, f3, f4, f5, f6, f7];
-  feature_name = ['mean','var','skew','kurt','CF','IF','SF']
+  feature = np.array([RMS, SKEW, KURT, CF])
+  feature_name = ['RMS', 'Skew','Kurt','CF']
 
-  Fn=fs/2;
-  ftype='band'
-  filter_order = 10
+  return feature, feature_name
+
+def  z_feature_freq(v, fs, band=[]):
+  
+  feature = []
+  feature_name = []
   
   if band.size != 0:
     f, A = z_fft_simple(v-np.mean(v), fs)
@@ -53,30 +53,48 @@ def  z_feature_simple(v, fs, band=[]):
       idx_2= f < band[n,1]
       idx_and=idx_1*idx_2
       
-      f_band = f[idx_and]
       A_band = A[idx_and]
-      
-      # plt.figure()
-      # plt.plot(f_band, A_band)
-
       feature_band_rms = np.sqrt(np.mean(A_band**2))
-      
-      [z,p,k] = signal.butter(filter_order,Wn/Fn,btype=ftype,output='zpk')
-      sos = signal.zpk2sos(z,p,k); #g is same as k
-      sos[0,0:3]=sos[0,0:3]/k 
-      v_filter = signal.sosfilt(sos,v)*k
-      feature_band_kurt = stats.kurtosis(v_filter, axis=0, fisher=False);
-
       feature.append(feature_band_rms)
-      feature.append(feature_band_kurt)
-
-      feature_name.append('Band_rms'+str(n+1))
-      feature_name.append('Band Kurt'+str(n+1))
+      feature_name.append('Band'+str(n+1))
       
   feature = np.array(feature)
-  feature = feature+1e-10
       
   return feature, feature_name
+
+def z_draw_features(feature_t_n, feature_t_f, feature_t_name, feature_f_n, feature_f_f, feature_f_name):
+    feature_t_ratio = feature_t_f/feature_t_n
+    feature_f_ratio = feature_f_f/feature_f_n
+    
+    fig, [ax1, ax2] = plt.subplots(1,2,figsize=(15,5))
+    ax1.plot(feature_t_n,'-bo')
+    ax1.plot(feature_t_f,'-rx')
+    ax1.set_xticks(np.arange(0,np.size(feature_t_name)), feature_t_name)
+    ax1.set_ylabel('Time Features')
+
+    ax2.plot(feature_f_n,'-bo')
+    ax2.plot(feature_f_f,'-rx')
+    ax2.set_xticks(np.arange(0,np.size(feature_f_name)), feature_f_name)
+    ax2.set_ylabel('Freq. Features')
+    ax2.ticklabel_format(axis='y',style='sci',scilimits=(0,0))
+    fig.tight_layout(pad=1)
+    plt.show()
+
+    fig, [ax1, ax2] = plt.subplots(1,2,figsize=(15,5))
+    ax1.plot(feature_t_ratio,'-bo')
+    ax1.axhline(y=1, color='r', linestyle='--')
+    ax1.set_xticks(np.arange(0,np.size(feature_t_name)), feature_t_name)
+    ax1.set_ylabel('Time Features Ratio')
+    ax1.set_ylim(bottom=0)
+
+    ax2.plot(feature_f_ratio,'-bo')
+    ax2.set_xticks(np.arange(0,np.size(feature_f_name)), feature_f_name)
+    ax2.set_ylabel('Freq. Features Ratio')
+    ax2.ticklabel_format(axis='y',style='sci',scilimits=(0,0))
+    ax2.axhline(y=1, color='r', linestyle='--')
+    ax1.set_ylim(bottom=0)
+    fig.tight_layout(pad=1)
+    plt.show()
 
 def z_resampling(time,v_sample,degree_sample,f_resampling, trig_rot):
     idx_zero_deg=degree_sample==0
