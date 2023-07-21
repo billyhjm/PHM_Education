@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.colors import Normalize
 import matplotlib.pyplot as plt
+from scipy.signal import hilbert
 
 def z_test(x):
     
@@ -29,6 +30,34 @@ def z_fft_simple(xn,fs):
 
   return f, A
   
+  
+def  z_feature(v, fs, band_energy_and_filter, band_enrgy_from_envelope):
+    
+    # Band-pass Filtering
+    ftype='band'
+    Wn=np.array([2000,4500])
+    v_filter = filtering(v, fs, Wn, ftype)
+    v_filter[0:100] = 0
+    v_filter_env = abs(hilbert(v_filter,axis=0));
+
+    # Time-domain Features from raw and filtered signal
+    feature_v, feature_name = z_feature_time(v)
+    feature_v_filter, feature_name = z_feature_time(v_filter)
+    feature_name_filtered = [s + '_filter' for s in feature_name]
+    
+    # Frequency band energy from raw signal
+    feature_v_band, feature_name_v_band = z_feature_freq(v, fs, band=np.matrix(band_energy_and_filter))
+    
+    # Frequency band energy from envelope of filtered signal
+    feature_v_band_env, feature_name_v_band_env = z_feature_freq(v_filter_env, fs, band_enrgy_from_envelope)
+    feature_name_v_band_env = [s + '_env' for s in feature_name_v_band_env]
+
+    feature = np.concatenate((feature_v, feature_v_band, feature_v_filter, feature_v_band_env))
+    feature_name = np.concatenate((feature_name, feature_name_v_band, feature_name_filtered, feature_name_v_band_env))
+    
+    return feature, feature_name
+
+
 def  z_feature_time(v):
   RMS = np.sqrt(np.mean(v**2))
   SKEW = stats.skew(v)
