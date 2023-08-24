@@ -35,7 +35,7 @@ def  z_feature(v, fs, band_energy_and_filter, band_enrgy_from_envelope):
     
     # Band-pass Filtering
     ftype='band'
-    Wn=np.array([2000,4500])
+    Wn=np.array(band_energy_and_filter)
     v_filter = filtering(v, fs, Wn, ftype)
     v_filter[0:100] = 0
     v_filter_env = abs(hilbert(v_filter,axis=0));
